@@ -1,29 +1,24 @@
-import type { Metadata } from "next";
+// Merge into your app/layout.tsx
+import type { ReactNode } from "react";
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta-sans",
-  subsets: ["latin"],
-});
-
 const manrope = Manrope({
-  variable: "--font-manrope",
   subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-jakarta",
+  display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Project Hub Design System",
-  description: "Project Hub color, type, and component foundations.",
-};
-
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${plusJakartaSans.variable} ${manrope.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${manrope.variable} ${jakarta.variable}`}>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }
