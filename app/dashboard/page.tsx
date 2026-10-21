@@ -26,6 +26,7 @@ import {
 } from "@/components/dashboard/mock-data";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { StatusBadge } from "@/components/dashboard/submission-status";
+import Link from "next/link";
 
 export default function DashboardPage() {
   // Demo only: replace this with the authenticated user's role from your session.
@@ -417,28 +418,28 @@ export default function DashboardPage() {
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1.5">
                         {item.repoUrl ? (
-                          <a
+                          <Link
                             href={item.repoUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 rounded-md bg-[#F5EFE6] px-2 py-1.5 text-[11px] font-semibold hover:bg-[#E8E3DA]"
                           >
                             <GitBranch size={12} /> Repo
-                          </a>
+                          </Link>
                         ) : (
                           <span className="text-[11px] text-[#8F8578]">
                             No repo
                           </span>
                         )}
                         {item.demoUrl ? (
-                          <a
+                          <Link
                             href={item.demoUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 rounded-md bg-[#F5EFE6] px-2 py-1.5 text-[11px] font-semibold hover:bg-[#E8E3DA]"
                           >
                             <ExternalLink size={12} /> Live
-                          </a>
+                          </Link>
                         ) : (
                           <span className="text-[11px] text-[#8F8578]">
                             No demo
