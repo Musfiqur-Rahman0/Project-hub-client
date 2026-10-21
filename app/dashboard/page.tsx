@@ -1,0 +1,733 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  Search,
+  LogOut,
+  FolderKanban,
+  Clock3,
+  CircleCheck,
+  CircleX,
+  ExternalLink,
+  Filter,
+  Eye,
+  MessageSquareText,
+  X,
+  Check,
+  ChevronDown,
+  FileText,
+  GitBranch,
+} from "lucide-react";
+import {
+  initialSubmissions,
+  type Submission,
+  type UserRole,
+  type SubmissionStatus,
+} from "@/components/dashboard/mock-data";
+import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import { StatusBadge } from "@/components/dashboard/submission-status";
+
+export default function DashboardPage() {
+  // Demo only: replace this with the authenticated user's role from your session.
+  const [role, setRole] = useState<UserRole>("student");
+  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [filter, setFilter] = useState<"All" | SubmissionStatus>("All");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [selected, setSelected] = useState<Submission | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [decision, setDecision] = useState<"Approved" | "Rejected" | null>(
+    null,
+  );
+  const isReviewer = role === "mentor" || role === "admin";
+
+  const visibleSubmissions = useMemo(() => {
+    const own =
+      role === "student"
+        ? submissions.filter((item) => item.studentId === "student-current")
+        : submissions;
+    return own
+      .filter((item) => filter === "All" || item.status === filter)
+      .filter((item) =>
+        `${item.projectName} ${item.studentName} ${item.stack.join(" ")}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+      )
+      .sort((a, b) =>
+        sort === "oldest"
+          ? new Date(a.submittedAt).getTime() -
+            new Date(b.submittedAt).getTime()
+          : sort === "name"
+            ? a.projectName.localeCompare(b.projectName)
+            : new Date(b.submittedAt).getTime() -
+              new Date(a.submittedAt).getTime(),
+      );
+  }, [filter, role, search, sort, submissions]);
+
+  const stats = isReviewer
+    ? [
+        {
+          label: "Total submissions",
+          value: submissions.length,
+          icon: FileText,
+          tone: "orange" as const,
+          hint: "Across all students",
+        },
+        {
+          label: "Pending review",
+          value: submissions.filter((s) => s.status === "Pending").length,
+          icon: Clock3,
+          tone: "amber" as const,
+          hint: "Action required",
+        },
+        {
+          label: "Approved",
+          value: submissions.filter((s) => s.status === "Approved").length,
+          icon: CircleCheck,
+          tone: "green" as const,
+          hint: "Successfully reviewed",
+        },
+        {
+          label: "Revision requested",
+          value: submissions.filter((s) => s.status === "Rejected").length,
+          icon: CircleX,
+          tone: "red" as const,
+          hint: "Feedback available",
+        },
+      ]
+    : [
+        {
+          label: "My submissions",
+          value: submissions.filter((s) => s.studentId === "student-current")
+            .length,
+          icon: FileText,
+          tone: "orange" as const,
+          hint: "Projects submitted",
+        },
+        {
+          label: "Pending review",
+          value: submissions.filter(
+            (s) => s.studentId === "student-current" && s.status === "Pending",
+          ).length,
+          icon: Clock3,
+          tone: "amber" as const,
+          hint: "Waiting for mentor",
+        },
+        {
+          label: "Approved",
+          value: submissions.filter(
+            (s) => s.studentId === "student-current" && s.status === "Approved",
+          ).length,
+          icon: CircleCheck,
+          tone: "green" as const,
+          hint: "Great work",
+        },
+        {
+          label: "Revision requested",
+          value: submissions.filter(
+            (s) => s.studentId === "student-current" && s.status === "Rejected",
+          ).length,
+          icon: CircleX,
+          tone: "red" as const,
+          hint: "Review mentor feedback",
+        },
+      ];
+
+  function openSubmission(item: Submission) {
+    setSelected(item);
+    setFeedback(item.feedback ?? "");
+    setDecision(item.status === "Pending" ? null : item.status);
+  }
+
+  function saveReview() {
+    if (!selected || !isReviewer || !decision) return;
+    const reviewedAt = new Date().toISOString();
+    setSubmissions((current) =>
+      current.map((item) =>
+        item.id === selected.id
+          ? {
+              ...item,
+              status: decision,
+              feedback: feedback.trim(),
+              reviewedAt,
+            }
+          : item,
+      ),
+    );
+    setSelected({
+      ...selected,
+      status: decision,
+      feedback: feedback.trim(),
+      reviewedAt,
+    });
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAF7F2] text-[#2C241E]">
+      <main className="mx-auto max-w-[1440px] space-y-7 px-4 py-7 sm:px-6 lg:px-0 lg:py-9">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-[#C25927]">
+              {isReviewer
+                ? `${role === "admin" ? "Admin" : "Mentor"} workspace`
+                : "Your learning workspace"}
+            </p>
+            <h1 className="font-display text-2xl font-extrabold tracking-tight text-[#1E1A16] sm:text-3xl">
+              {isReviewer
+                ? "Project Submissions Review"
+                : "My Project Submissions"}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6B6256]">
+              {isReviewer
+                ? "Review student work, check repositories and live demos, and share clear feedback."
+                : "Track your submitted projects and see your mentor’s feedback and review decisions."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 rounded-xl border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
+              Preview role
+              <select
+                value={role}
+                onChange={(event) => setRole(event.target.value as UserRole)}
+                className="bg-transparent font-bold text-[#342E27] outline-none"
+                aria-label="Preview dashboard role"
+              >
+                <option value="student">Student</option>
+                <option value="mentor">Mentor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
+              <span
+                className={`h-2 w-2 rounded-full ${isReviewer ? "bg-[#C25927]" : "bg-[#133E2B]"}`}
+              />
+              {isReviewer
+                ? `${role === "admin" ? "Admin" : "Mentor"} view`
+                : "Private student view"}
+            </div>
+          </div>
+        </div>
+
+        <DashboardStats stats={stats} />
+
+        <section className="overflow-hidden rounded-2xl border border-[#E8E3DA] bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-[#E8E3DA] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {(["All", "Pending", "Approved", "Rejected"] as const).map(
+                (status) => {
+                  const count = isReviewer
+                    ? submissions.filter(
+                        (s) => status === "All" || s.status === status,
+                      ).length
+                    : submissions.filter(
+                        (s) =>
+                          s.studentId === "student-current" &&
+                          (status === "All" || s.status === status),
+                      ).length;
+                  return (
+                    <button
+                      key={status}
+                      onClick={() => setFilter(status)}
+                      className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition ${filter === status ? "bg-[#C25927] text-white shadow-sm" : "text-[#6B6256] hover:bg-[#F5EFE6]"}`}
+                    >
+                      {status === "Rejected" ? "Revision requested" : status}{" "}
+                      <span
+                        className={
+                          filter === status ? "text-white/75" : "text-[#8F8578]"
+                        }
+                      >
+                        ({count})
+                      </span>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="whitespace-nowrap text-xs font-medium text-[#8F8578]">
+                Sort by
+              </label>
+              <div className="relative">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="appearance-none rounded-lg border border-[#E8E3DA] bg-[#FAF7F2] py-2 pl-3 pr-8 text-xs font-semibold outline-none focus:border-[#C25927]"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="name">Project name</option>
+                </select>
+                <ChevronDown
+                  size={13}
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8F8578]"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  setFilter("All");
+                  setSearch("");
+                  setSort("newest");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E8E3DA] px-3 py-2 text-xs font-semibold text-[#6B6256] hover:bg-[#FAF7F2]"
+              >
+                <Filter size={14} /> Reset
+              </button>
+            </div>
+          </div>
+
+          <div className="md:hidden">
+            {visibleSubmissions.length ? (
+              visibleSubmissions.map((item) => (
+                <article
+                  key={item.id}
+                  className="space-y-3 border-b border-[#E8E3DA] p-4 last:border-b-0"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <button
+                        onClick={() => openSubmission(item)}
+                        className="text-left font-bold text-[#342E27] hover:text-[#C25927] hover:underline"
+                      >
+                        {item.projectName}
+                      </button>
+                      <p className="mt-1 text-xs text-[#8F8578]">
+                        {isReviewer ? item.studentName + " · " : ""}
+                        {new Date(item.submittedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <StatusBadge status={item.status} />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.stack.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-md bg-[#F5EFE6] px-2 py-1 text-[11px] font-semibold text-[#6B6256]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex gap-2">
+                      {item.repoUrl && (
+                        <a
+                          href={item.repoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-[#F5EFE6] px-2.5 py-2 text-xs font-semibold"
+                        >
+                          <GitBranch size={13} /> Repo
+                        </a>
+                      )}
+                      {item.demoUrl && (
+                        <a
+                          href={item.demoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-[#F5EFE6] px-2.5 py-2 text-xs font-semibold"
+                        >
+                          <ExternalLink size={13} /> Live demo
+                        </a>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => openSubmission(item)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#E8E3DA] px-3 py-2 text-xs font-bold hover:border-[#C25927] hover:text-[#C25927]"
+                    >
+                      {isReviewer
+                        ? "Review submission"
+                        : role === "student" && item.status !== "Pending"
+                          ? "View feedback"
+                          : "View details"}{" "}
+                      <Eye size={13} />
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <EmptyState role={role} />
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[900px] text-left">
+              <thead className="border-b border-[#E8E3DA] bg-[#F6F3EE] text-[10px] font-extrabold uppercase tracking-[.12em] text-[#6B6256]">
+                <tr>
+                  <th className="px-5 py-4">
+                    {isReviewer ? "Project name & stack" : "My project & stack"}
+                  </th>
+                  {isReviewer && <th className="px-4 py-4">Student</th>}
+                  <th className="px-4 py-4">Submitted on</th>
+                  <th className="px-4 py-4">Links</th>
+                  <th className="px-4 py-4">Status</th>
+                  <th className="px-5 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E8E3DA]/80">
+                {visibleSubmissions.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={`transition hover:bg-[#FAF7F2] ${item.status === "Pending" ? "bg-[#FFFCF6]" : ""}`}
+                  >
+                    <td className="max-w-[330px] px-5 py-4">
+                      <button
+                        onClick={() => openSubmission(item)}
+                        className="text-left font-bold text-[#342E27] hover:text-[#C25927] hover:underline"
+                      >
+                        {item.projectName}
+                      </button>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {item.stack.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded bg-[#F5EFE6] px-1.5 py-1 text-[10px] font-semibold text-[#6B6256]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    {isReviewer && (
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DDEFE6] text-[10px] font-extrabold text-[#133E2B]">
+                            {item.studentInitials}
+                          </span>
+                          <div>
+                            <p className="text-xs font-bold">
+                              {item.studentName}
+                            </p>
+                            <p className="mt-1 text-[10px] text-[#8F8578]">
+                              {item.studentEmail}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    <td className="whitespace-nowrap px-4 py-4 text-xs text-[#6B6256]">
+                      {new Date(item.submittedAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      <p className="mt-1 text-[10px] text-[#8F8578]">
+                        {item.submittedTime}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-1.5">
+                        {item.repoUrl ? (
+                          <a
+                            href={item.repoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-md bg-[#F5EFE6] px-2 py-1.5 text-[11px] font-semibold hover:bg-[#E8E3DA]"
+                          >
+                            <GitBranch size={12} /> Repo
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-[#8F8578]">
+                            No repo
+                          </span>
+                        )}
+                        {item.demoUrl ? (
+                          <a
+                            href={item.demoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-md bg-[#F5EFE6] px-2 py-1.5 text-[11px] font-semibold hover:bg-[#E8E3DA]"
+                          >
+                            <ExternalLink size={12} /> Live
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-[#8F8578]">
+                            No demo
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status={item.status} />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        onClick={() => openSubmission(item)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${isReviewer ? "bg-[#C25927] text-white hover:bg-[#AD491D]" : "border border-[#E8E3DA] bg-white text-[#6B6256] hover:border-[#C25927] hover:text-[#C25927]"}`}
+                      >
+                        {isReviewer
+                          ? "Review"
+                          : role === "student" && item.status !== "Pending"
+                            ? "Feedback"
+                            : "View"}{" "}
+                        {role === "student" && item.status === "Rejected" ? (
+                          <MessageSquareText size={13} />
+                        ) : (
+                          <Eye size={13} />
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!visibleSubmissions.length && <EmptyState role={role} />}
+          </div>
+          <div className="flex flex-col justify-between gap-2 border-t border-[#E8E3DA] bg-[#FAF7F2] px-5 py-3 text-xs text-[#8F8578] sm:flex-row sm:items-center">
+            <span>
+              Showing{" "}
+              <strong className="text-[#342E27]">
+                {visibleSubmissions.length}
+              </strong>{" "}
+              {visibleSubmissions.length === 1 ? "submission" : "submissions"}
+            </span>
+            <span>
+              {isReviewer
+                ? `${role === "admin" ? "Admin" : "Mentor"} access · All student submissions`
+                : "Student access · Only your submissions"}
+            </span>
+          </div>
+        </section>
+      </main>
+
+      {selected && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <button
+            aria-label="Close details"
+            onClick={() => setSelected(null)}
+            className="absolute inset-0 bg-[#1E1A16]/50 backdrop-blur-[2px]"
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="submission-title"
+            className="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 bg-gradient-to-r from-[#C25927] to-[#9E431A] p-6 text-white">
+              <div>
+                <div className="mb-2 inline-flex rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
+                  {selected.status === "Pending"
+                    ? "Awaiting review"
+                    : selected.status === "Approved"
+                      ? "Approved submission"
+                      : "Revision requested"}
+                </div>
+                <h2
+                  id="submission-title"
+                  className="font-display text-xl font-extrabold"
+                >
+                  {selected.projectName}
+                </h2>
+                <p className="mt-1 text-xs text-white/75">
+                  Submission ID: {selected.id}
+                </p>
+              </div>
+              <button
+                aria-label="Close"
+                onClick={() => setSelected(null)}
+                className="rounded-lg p-2 text-white/80 hover:bg-white/10 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 space-y-6 overflow-y-auto p-6">
+              <div className="flex items-center justify-between rounded-xl border border-[#E8E3DA] bg-[#FAF7F2] p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDEFE6] text-xs font-extrabold text-[#133E2B]">
+                    {selected.studentInitials}
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold">
+                      {role === "student"
+                        ? "Submitted by you"
+                        : selected.studentName}
+                    </p>
+                    <p className="mt-1 text-xs text-[#8F8578]">
+                      {role === "student"
+                        ? "Your project submission"
+                        : selected.studentEmail}
+                    </p>
+                  </div>
+                </div>
+                <StatusBadge status={selected.status} />
+              </div>
+              <div>
+                <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.12em] text-[#8F8578]">
+                  Project resources
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ResourceLink
+                    href={selected.repoUrl}
+                    title="GitHub repository"
+                    subtitle={
+                      selected.repoUrl
+                        ? "Open source code"
+                        : "No repository provided"
+                    }
+                    icon={<GitBranch size={17} />}
+                  />
+                  <ResourceLink
+                    href={selected.demoUrl}
+                    title="Live deployment"
+                    subtitle={
+                      selected.demoUrl
+                        ? "Open deployed project"
+                        : "No live demo provided"
+                    }
+                    icon={<ExternalLink size={17} />}
+                  />
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[.12em] text-[#8F8578]">
+                  Project overview
+                </h3>
+                <p className="rounded-xl border border-[#E8E3DA] bg-[#FAF7F2] p-4 text-sm leading-6 text-[#6B6256]">
+                  {selected.description}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {selected.stack.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-md bg-[#F5EFE6] px-2.5 py-1.5 text-xs font-semibold text-[#6B6256]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[.12em] text-[#8F8578]">
+                  {isReviewer
+                    ? `${role === "admin" ? "Admin" : "Mentor"} feedback`
+                    : "Feedback from your mentor"}
+                </h3>
+                {isReviewer ? (
+                  <textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    rows={5}
+                    placeholder="Share specific, constructive feedback. Explain what went well and what should be improved..."
+                    className="w-full resize-y rounded-xl border border-[#E8E3DA] p-3 text-sm leading-6 outline-none focus:border-[#C25927] focus:ring-2 focus:ring-[#C25927]/10"
+                  />
+                ) : (
+                  <div
+                    className={`rounded-xl border p-4 text-sm leading-6 ${selected.status === "Rejected" ? "border-[#F4D5C4] bg-[#FDF6F2] text-[#753017]" : selected.status === "Approved" ? "border-[#BFE1D0] bg-[#F1F8F4] text-[#133E2B]" : "border-[#F0CD89] bg-[#FDFAF2] text-[#81501E]"}`}
+                  >
+                    {selected.feedback ||
+                      (selected.status === "Pending"
+                        ? "Your mentor has not reviewed this submission yet. You’ll see feedback here when the review is complete."
+                        : "No written feedback was added for this submission.")}
+                  </div>
+                )}
+              </div>
+              {isReviewer && (
+                <div>
+                  <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.12em] text-[#8F8578]">
+                    Review decision
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setDecision("Approved")}
+                      className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition ${decision === "Approved" ? "border-[#133E2B] bg-[#F1F8F4] text-[#133E2B] ring-2 ring-[#133E2B]/10" : "border-[#E8E3DA] hover:border-[#133E2B]/40"}`}
+                    >
+                      <Check size={16} /> Approve project
+                    </button>
+                    <button
+                      onClick={() => setDecision("Rejected")}
+                      className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition ${decision === "Rejected" ? "border-[#C25927] bg-[#FDF6F2] text-[#8E3A17] ring-2 ring-[#C25927]/10" : "border-[#E8E3DA] hover:border-[#C25927]/40"}`}
+                    >
+                      <CircleX size={16} /> Request revision
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-[#8F8578]">
+                    A written note is recommended when requesting a revision.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-[#E8E3DA] bg-white p-5">
+              <button
+                onClick={() => setSelected(null)}
+                className="rounded-xl border border-[#E8E3DA] px-4 py-2.5 text-sm font-bold text-[#6B6256] hover:bg-[#FAF7F2]"
+              >
+                Close
+              </button>
+              {isReviewer ? (
+                <button
+                  disabled={!decision}
+                  onClick={saveReview}
+                  className="rounded-xl bg-[#C25927] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#AD491D] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Save review
+                </button>
+              ) : (
+                <span className="text-xs text-[#8F8578]">
+                  Your submission details are private.
+                </span>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResourceLink({
+  href,
+  title,
+  subtitle,
+  icon,
+}: {
+  href?: string;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+}) {
+  const content = (
+    <>
+      <span className="rounded-lg bg-[#FDF6F2] p-2.5 text-[#C25927]">
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs font-bold text-[#342E27]">{title}</span>
+        <span className="mt-1 block truncate text-[11px] text-[#8F8578]">
+          {subtitle}
+        </span>
+      </span>
+      <ExternalLink className="ml-auto shrink-0 text-[#8F8578]" size={14} />
+    </>
+  );
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E8E3DA] p-3 transition hover:border-[#C25927]/40 hover:bg-[#FAF7F2]"
+    >
+      {content}
+    </a>
+  ) : (
+    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-dashed border-[#E8E3DA] p-3 opacity-60">
+      {content}
+    </div>
+  );
+}
+
+function EmptyState({ role }: { role: UserRole }) {
+  return (
+    <div className="px-6 py-14 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5EFE6] text-[#8F8578]">
+        <FolderKanban size={22} />
+      </div>
+      <h3 className="mt-4 font-display text-base font-extrabold">
+        No submissions found
+      </h3>
+      <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-[#8F8578]">
+        {role === "student"
+          ? "You don’t have any submissions matching these filters yet."
+          : "No projects match the current search and filters."}
+      </p>
+    </div>
+  );
+}
