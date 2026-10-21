@@ -1,4 +1,3 @@
-// Merge into your app/layout.tsx
 import type { ReactNode } from "react";
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";

@@ -16,13 +16,35 @@ const tones = {
 };
 
 export function DashboardStats({ stats }: { stats: Stat[] }) {
-  return <section aria-label="Submission statistics" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-    {stats.map(stat => {
-      const Icon = stat.icon;
-      return <article key={stat.label} className="flex items-center justify-between rounded-2xl border border-[#E8E3DA] bg-white p-5 shadow-sm">
-        <div><p className="text-[10px] font-extrabold uppercase tracking-[.13em] text-[#8F8578]">{stat.label}</p><p className="mt-2 font-display text-3xl font-extrabold tracking-tight text-[#1E1A16]">{stat.value}</p><p className="mt-1 text-[11px] text-[#8F8578]">{stat.hint}</p></div>
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${tones[stat.tone]}`}><Icon size={20}/></div>
-      </article>;
-    })}
-  </section>;
+  return (
+    <section
+      aria-label="Submission statistics"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      {stats.map((stat) => {
+        const Icon = stat.icon;
+        return (
+          <article
+            key={stat.label}
+            className="flex items-center justify-between rounded-[12px] border border-[#E8E3DA] bg-white p-5 shadow-sm"
+          >
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[.13em] text-[#8F8578]">
+                {stat.label}
+              </p>
+              <p className="mt-2 font-display text-3xl font-extrabold tracking-tight text-[#1E1A16]">
+                {stat.value}
+              </p>
+              <p className="mt-1 text-[11px] text-[#8F8578]">{stat.hint}</p>
+            </div>
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border ${tones[stat.tone]}`}
+            >
+              <Icon size={20} />
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
 }

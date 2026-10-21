@@ -185,7 +185,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 rounded-xl border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
+            <label className="flex items-center gap-2 rounded-[12px] border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
               Preview role
               <select
                 value={role}
@@ -198,7 +198,7 @@ export default function DashboardPage() {
                 <option value="admin">Admin</option>
               </select>
             </label>
-            <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
+            <div className="inline-flex w-fit items-center gap-2 rounded-[12px] border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
               <span
                 className={`h-2 w-2 rounded-full ${isReviewer ? "bg-[#C25927]" : "bg-[#133E2B]"}`}
               />
@@ -206,12 +206,17 @@ export default function DashboardPage() {
                 ? `${role === "admin" ? "Admin" : "Mentor"} view`
                 : "Private student view"}
             </div>
+            {role === "student" && (
+              <Link href={"/dashboard/submission"} className="button">
+                Add Project
+              </Link>
+            )}
           </div>
         </div>
 
         <DashboardStats stats={stats} />
 
-        <section className="overflow-hidden rounded-2xl border border-[#E8E3DA] bg-white shadow-sm">
+        <section className="overflow-hidden rounded-[12px] border border-[#E8E3DA] bg-white shadow-sm">
           <div className="flex flex-col gap-4 border-b border-[#E8E3DA] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               {(["All", "Pending", "Approved", "Rejected"] as const).map(
@@ -229,7 +234,7 @@ export default function DashboardPage() {
                     <button
                       key={status}
                       onClick={() => setFilter(status)}
-                      className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition ${filter === status ? "bg-[#C25927] text-white shadow-sm" : "text-[#6B6256] hover:bg-[#F5EFE6]"}`}
+                      className={`whitespace-nowrap rounded-[12px] px-3.5 py-2 text-xs font-bold transition ${filter === status ? "bg-[#C25927] text-white shadow-sm" : "text-[#6B6256] hover:bg-[#F5EFE6]"}`}
                     >
                       {status === "Rejected" ? "Revision requested" : status}{" "}
                       <span
@@ -252,7 +257,7 @@ export default function DashboardPage() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="appearance-none rounded-lg border border-[#E8E3DA] bg-[#FAF7F2] py-2 pl-3 pr-8 text-xs font-semibold outline-none focus:border-[#C25927]"
+                  className="appearance-none rounded-[12px] border border-[#E8E3DA] bg-[#FAF7F2] py-2 pl-3 pr-8 text-xs font-semibold outline-none focus:border-[#C25927]"
                 >
                   <option value="newest">Newest first</option>
                   <option value="oldest">Oldest first</option>
@@ -269,7 +274,7 @@ export default function DashboardPage() {
                   setSearch("");
                   setSort("newest");
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E8E3DA] px-3 py-2 text-xs font-semibold text-[#6B6256] hover:bg-[#FAF7F2]"
+                className="inline-flex items-center gap-1.5 rounded-[12px] border border-[#E8E3DA] px-3 py-2 text-xs font-semibold text-[#6B6256] hover:bg-[#FAF7F2]"
               >
                 <Filter size={14} /> Reset
               </button>
@@ -315,7 +320,7 @@ export default function DashboardPage() {
                           href={item.repoUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-lg bg-[#F5EFE6] px-2.5 py-2 text-xs font-semibold"
+                          className="inline-flex items-center gap-1 rounded-[12px] bg-[#F5EFE6] px-2.5 py-2 text-xs font-semibold"
                         >
                           <GitBranch size={13} /> Repo
                         </a>
@@ -325,7 +330,7 @@ export default function DashboardPage() {
                           href={item.demoUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-lg bg-[#F5EFE6] px-2.5 py-2 text-xs font-semibold"
+                          className="inline-flex items-center gap-1 rounded-[12px] bg-[#F5EFE6] px-2.5 py-2 text-xs font-semibold"
                         >
                           <ExternalLink size={13} /> Live demo
                         </a>
@@ -333,7 +338,7 @@ export default function DashboardPage() {
                     </div>
                     <button
                       onClick={() => openSubmission(item)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#E8E3DA] px-3 py-2 text-xs font-bold hover:border-[#C25927] hover:text-[#C25927]"
+                      className="inline-flex items-center gap-1.5 rounded-[12px] border border-[#E8E3DA] px-3 py-2 text-xs font-bold hover:border-[#C25927] hover:text-[#C25927]"
                     >
                       {isReviewer
                         ? "Review submission"
@@ -453,7 +458,7 @@ export default function DashboardPage() {
                     <td className="px-5 py-4 text-right">
                       <button
                         onClick={() => openSubmission(item)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${isReviewer ? "bg-[#C25927] text-white hover:bg-[#AD491D]" : "border border-[#E8E3DA] bg-white text-[#6B6256] hover:border-[#C25927] hover:text-[#C25927]"}`}
+                        className={`inline-flex items-center gap-1.5 rounded-[12px] px-3 py-2 text-xs font-bold transition ${isReviewer ? "bg-[#C25927] text-white hover:bg-[#AD491D]" : "border border-[#E8E3DA] bg-white text-[#6B6256] hover:border-[#C25927] hover:text-[#C25927]"}`}
                       >
                         {isReviewer
                           ? "Review"
@@ -525,13 +530,13 @@ export default function DashboardPage() {
               <button
                 aria-label="Close"
                 onClick={() => setSelected(null)}
-                className="rounded-lg p-2 text-white/80 hover:bg-white/10 hover:text-white"
+                className="rounded-[12px] p-2 text-white/80 hover:bg-white/10 hover:text-white"
               >
                 <X size={20} />
               </button>
             </div>
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
-              <div className="flex items-center justify-between rounded-xl border border-[#E8E3DA] bg-[#FAF7F2] p-4">
+              <div className="flex items-center justify-between rounded-[12px] border border-[#E8E3DA] bg-[#FAF7F2] p-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDEFE6] text-xs font-extrabold text-[#133E2B]">
                     {selected.studentInitials}
@@ -582,7 +587,7 @@ export default function DashboardPage() {
                 <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[.12em] text-[#8F8578]">
                   Project overview
                 </h3>
-                <p className="rounded-xl border border-[#E8E3DA] bg-[#FAF7F2] p-4 text-sm leading-6 text-[#6B6256]">
+                <p className="rounded-[12px] border border-[#E8E3DA] bg-[#FAF7F2] p-4 text-sm leading-6 text-[#6B6256]">
                   {selected.description}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -608,11 +613,11 @@ export default function DashboardPage() {
                     onChange={(e) => setFeedback(e.target.value)}
                     rows={5}
                     placeholder="Share specific, constructive feedback. Explain what went well and what should be improved..."
-                    className="w-full resize-y rounded-xl border border-[#E8E3DA] p-3 text-sm leading-6 outline-none focus:border-[#C25927] focus:ring-2 focus:ring-[#C25927]/10"
+                    className="w-full resize-y rounded-[12px] border border-[#E8E3DA] p-3 text-sm leading-6 outline-none focus:border-[#C25927] focus:ring-2 focus:ring-[#C25927]/10"
                   />
                 ) : (
                   <div
-                    className={`rounded-xl border p-4 text-sm leading-6 ${selected.status === "Rejected" ? "border-[#F4D5C4] bg-[#FDF6F2] text-[#753017]" : selected.status === "Approved" ? "border-[#BFE1D0] bg-[#F1F8F4] text-[#133E2B]" : "border-[#F0CD89] bg-[#FDFAF2] text-[#81501E]"}`}
+                    className={`rounded-[12px] border p-4 text-sm leading-6 ${selected.status === "Rejected" ? "border-[#F4D5C4] bg-[#FDF6F2] text-[#753017]" : selected.status === "Approved" ? "border-[#BFE1D0] bg-[#F1F8F4] text-[#133E2B]" : "border-[#F0CD89] bg-[#FDFAF2] text-[#81501E]"}`}
                   >
                     {selected.feedback ||
                       (selected.status === "Pending"
@@ -629,13 +634,13 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setDecision("Approved")}
-                      className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition ${decision === "Approved" ? "border-[#133E2B] bg-[#F1F8F4] text-[#133E2B] ring-2 ring-[#133E2B]/10" : "border-[#E8E3DA] hover:border-[#133E2B]/40"}`}
+                      className={`flex items-center justify-center gap-2 rounded-[12px] border px-3 py-3 text-sm font-bold transition ${decision === "Approved" ? "border-[#133E2B] bg-[#F1F8F4] text-[#133E2B] ring-2 ring-[#133E2B]/10" : "border-[#E8E3DA] hover:border-[#133E2B]/40"}`}
                     >
                       <Check size={16} /> Approve project
                     </button>
                     <button
                       onClick={() => setDecision("Rejected")}
-                      className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition ${decision === "Rejected" ? "border-[#C25927] bg-[#FDF6F2] text-[#8E3A17] ring-2 ring-[#C25927]/10" : "border-[#E8E3DA] hover:border-[#C25927]/40"}`}
+                      className={`flex items-center justify-center gap-2 rounded-[12px] border px-3 py-3 text-sm font-bold transition ${decision === "Rejected" ? "border-[#C25927] bg-[#FDF6F2] text-[#8E3A17] ring-2 ring-[#C25927]/10" : "border-[#E8E3DA] hover:border-[#C25927]/40"}`}
                     >
                       <CircleX size={16} /> Request revision
                     </button>
@@ -649,7 +654,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between gap-3 border-t border-[#E8E3DA] bg-white p-5">
               <button
                 onClick={() => setSelected(null)}
-                className="rounded-xl border border-[#E8E3DA] px-4 py-2.5 text-sm font-bold text-[#6B6256] hover:bg-[#FAF7F2]"
+                className="rounded-[12px] border border-[#E8E3DA] px-4 py-2.5 text-sm font-bold text-[#6B6256] hover:bg-[#FAF7F2]"
               >
                 Close
               </button>
@@ -657,7 +662,7 @@ export default function DashboardPage() {
                 <button
                   disabled={!decision}
                   onClick={saveReview}
-                  className="rounded-xl bg-[#C25927] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#AD491D] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-[12px] bg-[#C25927] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#AD491D] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Save review
                 </button>
@@ -687,7 +692,7 @@ function ResourceLink({
 }) {
   const content = (
     <>
-      <span className="rounded-lg bg-[#FDF6F2] p-2.5 text-[#C25927]">
+      <span className="rounded-[12px] bg-[#FDF6F2] p-2.5 text-[#C25927]">
         {icon}
       </span>
       <span className="min-w-0">
@@ -704,12 +709,12 @@ function ResourceLink({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E8E3DA] p-3 transition hover:border-[#C25927]/40 hover:bg-[#FAF7F2]"
+      className="flex min-w-0 items-center gap-3 rounded-[12px] border border-[#E8E3DA] p-3 transition hover:border-[#C25927]/40 hover:bg-[#FAF7F2]"
     >
       {content}
     </a>
   ) : (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-dashed border-[#E8E3DA] p-3 opacity-60">
+    <div className="flex min-w-0 items-center gap-3 rounded-[12px] border border-dashed border-[#E8E3DA] p-3 opacity-60">
       {content}
     </div>
   );
@@ -718,7 +723,7 @@ function ResourceLink({
 function EmptyState({ role }: { role: UserRole }) {
   return (
     <div className="px-6 py-14 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5EFE6] text-[#8F8578]">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[12px] bg-[#F5EFE6] text-[#8F8578]">
         <FolderKanban size={22} />
       </div>
       <h3 className="mt-4 font-display text-base font-extrabold">

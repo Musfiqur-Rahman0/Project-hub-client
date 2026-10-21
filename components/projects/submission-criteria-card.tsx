@@ -50,14 +50,6 @@ export function SubmissionCriteriaCard() {
           </li>
         ))}
       </ul>
-      <div className="mt-4 border-t border-border pt-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-wide">
-          Need to update after submitting?
-        </h3>
-        <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-          You can edit your submission details from the project dashboard.
-        </p>
-      </div>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BriefcaseBusiness, LogOut } from "lucide-react";
+import { Button } from "../ui/button";
 
 const demoUser = {
   name: "Alex Chen",
@@ -44,10 +45,10 @@ export function AppHeader() {
             aria-hidden="true"
             className="hidden h-5 border-l border-border sm:block"
           />
-          <span className="flex items-center gap-1.5 text-muted-foreground">
+          <Button className="bg-transparent hover:bg-transparent flex items-center gap-1.5 text-muted-foreground">
             <LogOut aria-hidden="true" size={13} />
             <span>Sign out</span>
-          </span>
+          </Button>
         </div>
       </div>
     </header>
