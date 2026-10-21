@@ -89,7 +89,7 @@ export default function DashboardPage() {
           hint: "Successfully reviewed",
         },
         {
-          label: "Revision requested",
+          label: "Rejected",
           value: submissions.filter((s) => s.status === "Rejected").length,
           icon: CircleX,
           tone: "red" as const,
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           hint: "Great work",
         },
         {
-          label: "Revision requested",
+          label: "Rejected",
           value: submissions.filter(
             (s) => s.studentId === "student-current" && s.status === "Rejected",
           ).length,
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                       onClick={() => setFilter(status)}
                       className={`whitespace-nowrap rounded-[12px] px-3.5 py-2 text-xs font-bold transition ${filter === status ? "bg-[#C25927] text-white shadow-sm" : "text-[#6B6256] hover:bg-[#F5EFE6]"}`}
                     >
-                      {status === "Rejected" ? "Revision requested" : status}{" "}
+                      {status === "Rejected" ? "Rejected" : status}{" "}
                       <span
                         className={
                           filter === status ? "text-white/75" : "text-[#8F8578]"
@@ -515,7 +515,7 @@ export default function DashboardPage() {
                     ? "Awaiting review"
                     : selected.status === "Approved"
                       ? "Approved submission"
-                      : "Revision requested"}
+                      : "Rejected"}
                 </div>
                 <h2
                   id="submission-title"
@@ -642,11 +642,11 @@ export default function DashboardPage() {
                       onClick={() => setDecision("Rejected")}
                       className={`flex items-center justify-center gap-2 rounded-[12px] border px-3 py-3 text-sm font-bold transition ${decision === "Rejected" ? "border-[#C25927] bg-[#FDF6F2] text-[#8E3A17] ring-2 ring-[#C25927]/10" : "border-[#E8E3DA] hover:border-[#C25927]/40"}`}
                     >
-                      <CircleX size={16} /> Request revision
+                      <CircleX size={16} /> Request Rejected
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-[#8F8578]">
-                    A written note is recommended when requesting a revision.
+                    A written note is recommended when requesting a Rejected.
                   </p>
                 </div>
               )}

@@ -8,7 +8,7 @@ const styles: Record<SubmissionStatus, string> = {
 const labels: Record<SubmissionStatus, string> = {
   Pending: "Pending review",
   Approved: "Approved",
-  Rejected: "Revision requested",
+  Rejected: "Rejected",
 };
 
 export function StatusBadge({ status }: { status: SubmissionStatus }) {
