@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type SubmitHandler, useForm } from "react-hook-form";
-
+import { toast } from "sonner";
 
 import { AuthForm } from "./auth-form";
 import { PasswordStrength } from "./password-strength";
 import { registerSchema, RegisterValues } from "@/lib/validation/auth";
+import { registerUser } from "@/lib/api";
 import { TextField } from "./text-field";
 import { PasswordField } from "./password-field";
 import { CheckboxField } from "./checkbox-field";
@@ -16,15 +18,28 @@ import { SubmitButton } from "./submit-button";
 const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
 
 export function RegisterForm() {
+  const router = useRouter();
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { fullName: "", email: "", password: "", confirmPassword: "", terms: false },
   });
 
   const onSubmit: SubmitHandler<RegisterValues> = async (values) => {
-    // TODO: call your API / server action here.
-    // On failure: form.setError("root", { message: "Something went wrong. Try again." });
-    console.log(values);
+    try {
+      await registerUser({
+        fullName: values.fullName,
+        email: values.email,
+        password: values.password,
+      });
+      toast.success("Account created. Please sign in.");
+      router.replace("/login");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your account. Please try again.",
+      );
+    }
   };
 
   return (

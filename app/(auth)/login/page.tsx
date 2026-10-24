@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { AuthFooterLink } from "@/components/auth/auth-footer-link";
 
@@ -23,7 +24,9 @@ export default function LoginPage() {
         title="Sign in to your workspace"
         description="Use the email you registered with to pick up where you left off."
       />
-      <LoginForm />
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
       <AuthFooterLink
         prompt="New to ProjectHub?"
         href="/register"
