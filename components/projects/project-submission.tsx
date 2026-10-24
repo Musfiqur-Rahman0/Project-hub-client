@@ -2,8 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, CheckCircle2, Link2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { type Control, type SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,13 +17,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { projectSchema, type ProjectValues } from "@/lib/validation/project";
+import {
+  getApiErrorMessage,
+  useCreateSubmissionMutation,
+} from "@/lib/api";
 
 interface ProjectSubmissionProps {
   aside?: ReactNode;
 }
 
 export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
-  const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
+  const [createSubmission] = useCreateSubmissionMutation();
   const form = useForm<ProjectValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -33,10 +38,14 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
     },
   });
 
-  const onSubmit: SubmitHandler<ProjectValues> = async () => {
-    setSubmissionNotice(
-      "Your project passed validation, but the submission service is not connected yet. Nothing has been sent.",
-    );
+  const onSubmit: SubmitHandler<ProjectValues> = async (values) => {
+    try {
+      await createSubmission(values).unwrap();
+      toast.success("Project submitted for review.");
+      form.reset();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    }
   };
 
   return (
@@ -59,7 +68,6 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
           <form
             noValidate
             onSubmit={form.handleSubmit(onSubmit)}
-            onChange={() => setSubmissionNotice(null)}
             className="space-y-4"
           >
             <ProjectTextField
@@ -122,20 +130,6 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
                 </FormItem>
               )}
             />
-
-            {submissionNotice && (
-              <p
-                role="status"
-                className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-foreground"
-              >
-                {submissionNotice}
-              </p>
-            )}
-            {form.formState.errors.root?.message && (
-              <p role="alert" className="text-xs text-destructive">
-                {form.formState.errors.root.message}
-              </p>
-            )}
 
             <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">

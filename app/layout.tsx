@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -17,7 +18,10 @@ const jakarta = Plus_Jakarta_Sans({
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${manrope.variable} ${jakarta.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <Toaster position="top-right" richColors />
+      </body>
     </html>
   );
 }
