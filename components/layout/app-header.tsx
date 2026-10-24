@@ -1,13 +1,37 @@
-import Link from "next/link";
-import { BriefcaseBusiness, LogOut } from "lucide-react";
-import { Button } from "../ui/button";
+"use client";
 
-const demoUser = {
-  name: "Alex Chen",
-  email: "s.chen@university.edu",
-};
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { BriefcaseBusiness, LogOut } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "../ui/button";
+import { logoutUser } from "@/lib/api";
+import { clearUser } from "@/lib/auth-slice";
+import { useAppDispatch, useAppSelector } from "@/lib/store";
 
 export function AppHeader() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const authStatus = useAppSelector((state) => state.auth.status);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+    try {
+      await logoutUser();
+      dispatch(clearUser());
+      toast.success("You have been signed out.");
+      router.replace("/login");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to sign out.");
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
+
   return (
     <header className="border-b border-border bg-card">
       <div className="mx-auto flex min-h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-0">
@@ -34,21 +58,35 @@ export function AppHeader() {
           <span className="flex items-center gap-2 font-medium">
             <span
               aria-hidden="true"
-              className="size-2 rounded-full bg-brand-secondary"
+              className={`size-2 rounded-full ${user ? "bg-brand-secondary" : "bg-muted-foreground"}`}
             />
-            <span className="hidden sm:inline">{demoUser.name}</span>
+            <span className="hidden sm:inline">
+              {user?.fullName ??
+                (authStatus === "loading" ? "Loading account…" : "Account unavailable")}
+            </span>
           </span>
           <span className="hidden text-muted-foreground md:inline">
-            {demoUser.email}
+            {user?.email ?? ""}
           </span>
           <span
             aria-hidden="true"
             className="hidden h-5 border-l border-border sm:block"
           />
-          <Button className="bg-transparent hover:bg-transparent flex items-center gap-1.5 text-muted-foreground">
-            <LogOut aria-hidden="true" size={13} />
-            <span>Sign out</span>
-          </Button>
+          {user ? (
+            <Button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="flex items-center gap-1.5 bg-transparent text-muted-foreground hover:bg-transparent"
+            >
+              <LogOut aria-hidden="true" size={13} />
+              <span>{isSigningOut ? "Signing out…" : "Sign out"}</span>
+            </Button>
+          ) : (
+            <span className="text-muted-foreground">
+              {authStatus === "loading" ? "Checking session…" : "Not signed in"}
+            </span>
+          )}
         </div>
       </div>
     </header>
