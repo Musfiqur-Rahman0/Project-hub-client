@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  Search,
-  LogOut,
   FolderKanban,
   Clock3,
   CircleCheck,
@@ -207,7 +205,7 @@ export default function DashboardPage() {
                 : "Private student view"}
             </div>
             {role === "student" && (
-              <Link href={"/dashboard/submission"} className="button">
+              <Link href="/submission" className="button">
                 Add Project
               </Link>
             )}

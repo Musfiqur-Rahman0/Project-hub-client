@@ -1,13 +1,36 @@
-import Link from "next/link";
-import { BriefcaseBusiness, LogOut } from "lucide-react";
-import { Button } from "../ui/button";
+"use client";
 
-const demoUser = {
-  name: "Alex Chen",
-  email: "s.chen@university.edu",
-};
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BriefcaseBusiness, LogOut } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "../ui/button";
+import {
+  api,
+  getApiErrorMessage,
+  useCurrentUserQuery,
+  useLogoutMutation,
+} from "@/lib/api";
+import { useAppDispatch } from "@/lib/store";
 
 export function AppHeader() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { data: user, isLoading } = useCurrentUserQuery();
+  const [logout, { isLoading: isSigningOut }] = useLogoutMutation();
+
+  async function handleSignOut() {
+    try {
+      await logout().unwrap();
+      dispatch(api.util.resetApiState());
+      toast.success("You have been signed out.");
+      router.replace("/login");
+      router.refresh();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    }
+  }
+
   return (
     <header className="border-b border-border bg-card">
       <div className="mx-auto flex min-h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-0">
@@ -36,18 +59,25 @@ export function AppHeader() {
               aria-hidden="true"
               className="size-2 rounded-full bg-brand-secondary"
             />
-            <span className="hidden sm:inline">{demoUser.name}</span>
+            <span className="hidden sm:inline">
+              {isLoading ? "Loading…" : user?.fullName}
+            </span>
           </span>
           <span className="hidden text-muted-foreground md:inline">
-            {demoUser.email}
+            {user?.email}
           </span>
           <span
             aria-hidden="true"
             className="hidden h-5 border-l border-border sm:block"
           />
-          <Button className="bg-transparent hover:bg-transparent flex items-center gap-1.5 text-muted-foreground">
+          <Button
+            type="button"
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="flex items-center gap-1.5 bg-transparent text-muted-foreground hover:bg-transparent"
+          >
             <LogOut aria-hidden="true" size={13} />
-            <span>Sign out</span>
+            <span>{isSigningOut ? "Signing out…" : "Sign out"}</span>
           </Button>
         </div>
       </div>
