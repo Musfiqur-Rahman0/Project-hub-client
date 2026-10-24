@@ -2,8 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, CheckCircle2, Link2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { type ReactNode } from "react";
 import { type Control, type SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,20 +18,20 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { projectSchema, type ProjectValues } from "@/lib/validation/project";
-import { submitProject } from "@/lib/submissions-slice";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { toast } from "sonner";
+import {
+  submitProject,
+  type SubmissionRequestError,
+} from "@/lib/submissions-slice";
+import { useAppDispatch } from "@/lib/store";
+import ProjectTextField from "./ProjectTextField";
 
 interface ProjectSubmissionProps {
   aside?: ReactNode;
 }
 
 export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
-  const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
+  const router = useRouter();
   const dispatch = useAppDispatch();
-  const submissionStatus = useAppSelector(
-    (state) => state.submissions.status,
-  );
   const form = useForm<ProjectValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -41,17 +43,34 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
   });
 
   const onSubmit: SubmitHandler<ProjectValues> = async (values) => {
+    form.clearErrors();
     try {
       await dispatch(submitProject(values)).unwrap();
-      setSubmissionNotice("Your project was submitted for review.");
       toast.success("Project submitted successfully.");
       form.reset();
+      router.push("/");
     } catch (error) {
-      toast.error(
-        typeof error === "string"
-          ? error
-          : "Unable to submit your project. Please try again.",
-      );
+      const requestError = getSubmissionRequestError(error);
+      const fieldErrors = getSubmissionFieldErrors(requestError.details);
+      for (const field of [
+        "projectName",
+        "repoUrl",
+        "liveUrl",
+        "description",
+      ] as const) {
+        const message = fieldErrors[field];
+        if (message) {
+          form.setError(field, { type: "server", message });
+        }
+      }
+
+      if (Object.keys(fieldErrors).length === 0) {
+        form.setError("root", {
+          type: "server",
+          message: requestError.message,
+        });
+      }
+      toast.error(requestError.message);
     }
   };
 
@@ -75,7 +94,7 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
           <form
             noValidate
             onSubmit={form.handleSubmit(onSubmit)}
-            onChange={() => setSubmissionNotice(null)}
+            onChange={() => form.clearErrors("root")}
             className="space-y-4"
           >
             <ProjectTextField
@@ -139,14 +158,6 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
               )}
             />
 
-            {submissionNotice && (
-              <p
-                role="status"
-                className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-foreground"
-              >
-                {submissionNotice}
-              </p>
-            )}
             {form.formState.errors.root?.message && (
               <p role="alert" className="text-xs text-destructive">
                 {form.formState.errors.root.message}
@@ -168,11 +179,11 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={
-                    form.formState.isSubmitting || submissionStatus === "loading"
-                  }
+                  disabled={form.formState.isSubmitting}
                 >
-                  Submit project
+                  {form.formState.isSubmitting
+                    ? "Submitting…"
+                    : "Submit project"}
                   <ArrowRight aria-hidden="true" />
                 </Button>
               </div>
@@ -186,59 +197,40 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
   );
 }
 
-interface ProjectTextFieldProps {
-  control: Control<ProjectValues>;
-  name: "projectName" | "repoUrl" | "liveUrl";
-  label: string;
-  placeholder: string;
-  description: string;
-  type?: string;
-  required?: boolean;
-  icon?: ReactNode;
+function getSubmissionFieldErrors(
+  details: unknown,
+): Partial<Record<keyof ProjectValues, string>> {
+  if (typeof details !== "object" || details === null) return {};
+
+  const record = details as Record<string, unknown>;
+  const errors: Partial<Record<keyof ProjectValues, string>> = {};
+  for (const field of [
+    "projectName",
+    "repoUrl",
+    "liveUrl",
+    "description",
+  ] as const) {
+    const messages = record[field];
+    if (Array.isArray(messages) && typeof messages[0] === "string") {
+      errors[field] = messages[0];
+    }
+  }
+
+  return errors;
 }
 
-function ProjectTextField({
-  control,
-  name,
-  label,
-  placeholder,
-  description,
-  type = "text",
-  required,
-  icon,
-}: ProjectTextFieldProps) {
-  return (
-    <FormField
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide">
-            {label}
-            {required && <span className="text-primary"> *</span>}
-          </FormLabel>
-          <div className="relative">
-            {icon && (
-              <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-muted-foreground [&_svg]:size-3">
-                {icon}
-              </span>
-            )}
-            <FormControl>
-              <Input
-                {...field}
-                type={type}
-                placeholder={placeholder}
-                aria-required={required}
-                className={`min-h-10 rounded-md bg-background text-xs ${icon ? "pl-8" : ""}`}
-              />
-            </FormControl>
-          </div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            {description}
-          </p>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-  );
+function getSubmissionRequestError(error: unknown): SubmissionRequestError {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return {
+      message: error.message,
+      details: "details" in error ? error.details : undefined,
+    };
+  }
+
+  return { message: "Unable to submit your project. Please try again." };
 }

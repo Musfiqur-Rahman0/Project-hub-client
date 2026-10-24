@@ -25,6 +25,11 @@ type SubmissionsState = {
   statsError: string | null;
 }
 
+export type SubmissionRequestError = {
+  message: string;
+  details?: unknown;
+};
+
 const initialState: SubmissionsState = {
   items: [],
   pagination: null,
@@ -73,16 +78,20 @@ export const fetchSubmissionStats = createAsyncThunk<
 export const submitProject = createAsyncThunk<
   ProjectSubmission,
   SubmissionRequest,
-  { rejectValue: string }
+  { rejectValue: SubmissionRequestError }
 >("submissions/create", async (input, { rejectWithValue }) => {
   try {
     return await createSubmission(input);
   } catch (error) {
-    return rejectWithValue(
-      error instanceof ApiError || error instanceof Error
-        ? error.message
-        : "Unable to submit this project.",
-    );
+    if (error instanceof ApiError) {
+      return rejectWithValue({ message: error.message, details: error.details });
+    }
+    return rejectWithValue({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unable to submit this project.",
+    });
   }
 });
 
@@ -155,7 +164,8 @@ const submissionsSlice = createSlice({
       })
       .addCase(submitProject.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.payload ?? "Unable to submit this project.";
+        state.error =
+          action.payload?.message ?? "Unable to submit this project.";
       })
       .addCase(saveSubmissionReview.pending, (state) => {
         state.reviewStatus = "loading";
