@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   Search,
-  LogOut,
   FolderKanban,
   Clock3,
   CircleCheck,
@@ -18,121 +18,141 @@ import {
   FileText,
   GitBranch,
 } from "lucide-react";
-import {
-  initialSubmissions,
-  type Submission,
-  type UserRole,
-  type SubmissionStatus,
-} from "@/components/dashboard/mock-data";
+import type {
+  Submission,
+  UserRole,
+  SubmissionStatus,
+} from "@/components/dashboard/types";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { StatusBadge } from "@/components/dashboard/submission-status";
 import Link from "next/link";
+import type {
+  AuthUser,
+  ProjectSubmission,
+  SubmissionSort,
+  SubmissionStatus as ApiSubmissionStatus,
+} from "@/lib/api";
+import { useAppDispatch, useAppSelector } from "@/lib/store";
+import {
+  fetchSubmissionStats,
+  fetchSubmissions,
+  saveSubmissionReview,
+} from "@/lib/submissions-slice";
+import EmptyState from "@/components/dashboard/EmptyState";
+import ResourceLink from "@/components/dashboard/ResourceLink";
+import toDashboardSubmission from "@/components/dashboard/toDashboardSubmission";
 
 export default function DashboardPage() {
-  // Demo only: replace this with the authenticated user's role from your session.
-  const [role, setRole] = useState<UserRole>("student");
-  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const authStatus = useAppSelector((state) => state.auth.status);
+  const {
+    items,
+    pagination,
+    stats: submissionStats,
+    status,
+    statsStatus,
+    reviewStatus,
+  } = useAppSelector((state) => state.submissions);
+  const role: UserRole =
+    user?.role === "ADMIN"
+      ? "admin"
+      : user?.role === "MENTOR"
+        ? "mentor"
+        : "student";
   const [filter, setFilter] = useState<"All" | SubmissionStatus>("All");
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState<SubmissionSort>("newest");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [selected, setSelected] = useState<Submission | null>(null);
   const [feedback, setFeedback] = useState("");
   const [decision, setDecision] = useState<"Approved" | "Rejected" | null>(
     null,
   );
   const isReviewer = role === "mentor" || role === "admin";
+  const apiFilter: ApiSubmissionStatus | undefined =
+    filter === "All"
+      ? undefined
+      : (filter.toUpperCase() as ApiSubmissionStatus);
 
-  const visibleSubmissions = useMemo(() => {
-    const own =
-      role === "student"
-        ? submissions.filter((item) => item.studentId === "student-current")
-        : submissions;
-    return own
-      .filter((item) => filter === "All" || item.status === filter)
-      .filter((item) =>
-        `${item.projectName} ${item.studentName} ${item.stack.join(" ")}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
-      )
-      .sort((a, b) =>
-        sort === "oldest"
-          ? new Date(a.submittedAt).getTime() -
-            new Date(b.submittedAt).getTime()
-          : sort === "name"
-            ? a.projectName.localeCompare(b.projectName)
-            : new Date(b.submittedAt).getTime() -
-              new Date(a.submittedAt).getTime(),
-      );
-  }, [filter, role, search, sort, submissions]);
+  useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      300,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
-  const stats = isReviewer
-    ? [
-        {
-          label: "Total submissions",
-          value: submissions.length,
-          icon: FileText,
-          tone: "orange" as const,
-          hint: "Across all students",
-        },
-        {
-          label: "Pending review",
-          value: submissions.filter((s) => s.status === "Pending").length,
-          icon: Clock3,
-          tone: "amber" as const,
-          hint: "Action required",
-        },
-        {
-          label: "Approved",
-          value: submissions.filter((s) => s.status === "Approved").length,
-          icon: CircleCheck,
-          tone: "green" as const,
-          hint: "Successfully reviewed",
-        },
-        {
-          label: "Rejected",
-          value: submissions.filter((s) => s.status === "Rejected").length,
-          icon: CircleX,
-          tone: "red" as const,
-          hint: "Feedback available",
-        },
-      ]
-    : [
-        {
-          label: "My submissions",
-          value: submissions.filter((s) => s.studentId === "student-current")
-            .length,
-          icon: FileText,
-          tone: "orange" as const,
-          hint: "Projects submitted",
-        },
-        {
-          label: "Pending review",
-          value: submissions.filter(
-            (s) => s.studentId === "student-current" && s.status === "Pending",
-          ).length,
-          icon: Clock3,
-          tone: "amber" as const,
-          hint: "Waiting for mentor",
-        },
-        {
-          label: "Approved",
-          value: submissions.filter(
-            (s) => s.studentId === "student-current" && s.status === "Approved",
-          ).length,
-          icon: CircleCheck,
-          tone: "green" as const,
-          hint: "Great work",
-        },
-        {
-          label: "Rejected",
-          value: submissions.filter(
-            (s) => s.studentId === "student-current" && s.status === "Rejected",
-          ).length,
-          icon: CircleX,
-          tone: "red" as const,
-          hint: "Review mentor feedback",
-        },
-      ];
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !user) return;
+    dispatch(
+      fetchSubmissions({
+        page,
+        pageSize,
+        status: apiFilter,
+        search: debouncedSearch || undefined,
+        sort,
+      }),
+    )
+      .unwrap()
+      .catch((error: string) => toast.error(error));
+  }, [
+    apiFilter,
+    authStatus,
+    debouncedSearch,
+    dispatch,
+    page,
+    pageSize,
+    sort,
+    user,
+  ]);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !user) return;
+    dispatch(fetchSubmissionStats())
+      .unwrap()
+      .catch((error: string) => toast.error(error));
+  }, [authStatus, dispatch, user]);
+
+  const submissions = useMemo(
+    () => items.map((item) => toDashboardSubmission(item, user)),
+    [items, user],
+  );
+
+  const visibleSubmissions = submissions;
+
+  const stats = [
+    {
+      label: isReviewer ? "Total submissions" : "My submissions",
+      value: submissionStats?.total ?? 0,
+      icon: FileText,
+      tone: "orange" as const,
+      hint: isReviewer ? "Across all students" : "Projects submitted",
+    },
+    {
+      label: "Pending review",
+      value: submissionStats?.pending ?? 0,
+      icon: Clock3,
+      tone: "amber" as const,
+      hint: isReviewer ? "Action required" : "Waiting for mentor",
+    },
+    {
+      label: "Approved",
+      value: submissionStats?.approved ?? 0,
+      icon: CircleCheck,
+      tone: "green" as const,
+      hint: isReviewer ? "Successfully reviewed" : "Great work",
+    },
+    {
+      label: "Rejected",
+      value: submissionStats?.rejected ?? 0,
+      icon: CircleX,
+      tone: "red" as const,
+      hint: isReviewer ? "Feedback available" : "Review mentor feedback",
+    },
+  ];
 
   function openSubmission(item: Submission) {
     setSelected(item);
@@ -140,27 +160,47 @@ export default function DashboardPage() {
     setDecision(item.status === "Pending" ? null : item.status);
   }
 
-  function saveReview() {
-    if (!selected || !isReviewer || !decision) return;
-    const reviewedAt = new Date().toISOString();
-    setSubmissions((current) =>
-      current.map((item) =>
-        item.id === selected.id
-          ? {
-              ...item,
-              status: decision,
-              feedback: feedback.trim(),
-              reviewedAt,
-            }
-          : item,
-      ),
-    );
-    setSelected({
-      ...selected,
-      status: decision,
-      feedback: feedback.trim(),
-      reviewedAt,
-    });
+  async function saveReview() {
+    if (!selected || !isReviewer || !decision || !feedback.trim()) return;
+    try {
+      const reviewed = await dispatch(
+        saveSubmissionReview({
+          id: selected.id,
+          status: decision.toUpperCase() as Exclude<
+            ApiSubmissionStatus,
+            "PENDING"
+          >,
+          feedback: feedback.trim(),
+        }),
+      ).unwrap();
+      setSelected({
+        ...selected,
+        status: decision,
+        feedback: reviewed.feedback ?? feedback.trim(),
+        reviewedAt: reviewed.reviewedAt ?? new Date().toISOString(),
+      });
+      toast.success("Review saved.");
+      const [listResult] = await Promise.all([
+        dispatch(
+          fetchSubmissions({
+            page,
+            pageSize,
+            status: apiFilter,
+            search: debouncedSearch || undefined,
+            sort,
+          }),
+        ).unwrap(),
+        dispatch(fetchSubmissionStats()).unwrap(),
+      ]);
+      const refreshedSubmission = listResult.submissions.find(
+        (item) => item.id === selected.id,
+      );
+      if (refreshedSubmission) {
+        setSelected(toDashboardSubmission(refreshedSubmission, user));
+      }
+    } catch (error) {
+      toast.error(typeof error === "string" ? error : "Unable to save review.");
+    }
   }
 
   return (
@@ -185,19 +225,6 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 rounded-[12px] border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
-              Preview role
-              <select
-                value={role}
-                onChange={(event) => setRole(event.target.value as UserRole)}
-                className="bg-transparent font-bold text-[#342E27] outline-none"
-                aria-label="Preview dashboard role"
-              >
-                <option value="student">Student</option>
-                <option value="mentor">Mentor</option>
-                <option value="admin">Admin</option>
-              </select>
-            </label>
             <div className="inline-flex w-fit items-center gap-2 rounded-[12px] border border-[#E8E3DA] bg-white px-3 py-2 text-xs text-[#6B6256] shadow-sm">
               <span
                 className={`h-2 w-2 rounded-full ${isReviewer ? "bg-[#C25927]" : "bg-[#133E2B]"}`}
@@ -207,7 +234,7 @@ export default function DashboardPage() {
                 : "Private student view"}
             </div>
             {role === "student" && (
-              <Link href={"/dashboard/submission"} className="button">
+              <Link href="/submission" className="button">
                 Add Project
               </Link>
             )}
@@ -215,25 +242,61 @@ export default function DashboardPage() {
         </div>
 
         <DashboardStats stats={stats} />
+        {authStatus === "loading" && (
+          <p role="status" className="text-sm text-[#6B6256]">
+            Loading your account…
+          </p>
+        )}
+        {status === "loading" && (
+          <p role="status" className="text-sm text-[#6B6256]">
+            Loading submissions…
+          </p>
+        )}
+        {status === "failed" && (
+          <p role="alert" className="text-sm text-destructive">
+            Unable to load submissions. Please try again.
+          </p>
+        )}
+        {statsStatus === "failed" && (
+          <p role="alert" className="text-sm text-destructive">
+            Unable to load submission statistics.
+          </p>
+        )}
 
         <section className="overflow-hidden rounded-[12px] border border-[#E8E3DA] bg-white shadow-sm">
           <div className="flex flex-col gap-4 border-b border-[#E8E3DA] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex min-w-48 items-center gap-2 rounded-[12px] border border-[#E8E3DA] bg-[#FAF7F2] px-3 py-2 text-xs text-[#8F8578]">
+              <Search size={14} aria-hidden="true" />
+              <input
+                value={search}
+                onChange={(event) => {
+                  setPage(1);
+                  setSearch(event.target.value);
+                }}
+                placeholder="Search submissions"
+                aria-label="Search submissions"
+                className="min-w-0 flex-1 bg-transparent text-[#342E27] outline-none placeholder:text-[#8F8578]"
+              />
+            </label>
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               {(["All", "Pending", "Approved", "Rejected"] as const).map(
                 (status) => {
-                  const count = isReviewer
-                    ? submissions.filter(
-                        (s) => status === "All" || s.status === status,
-                      ).length
-                    : submissions.filter(
-                        (s) =>
-                          s.studentId === "student-current" &&
-                          (status === "All" || s.status === status),
-                      ).length;
+                  const count =
+                    status === "All"
+                      ? (submissionStats?.total ?? 0)
+                      : (submissionStats?.[
+                          status.toLowerCase() as
+                            | "pending"
+                            | "approved"
+                            | "rejected"
+                        ] ?? 0);
                   return (
                     <button
                       key={status}
-                      onClick={() => setFilter(status)}
+                      onClick={() => {
+                        setPage(1);
+                        setFilter(status);
+                      }}
                       className={`whitespace-nowrap rounded-[12px] px-3.5 py-2 text-xs font-bold transition ${filter === status ? "bg-[#C25927] text-white shadow-sm" : "text-[#6B6256] hover:bg-[#F5EFE6]"}`}
                     >
                       {status === "Rejected" ? "Rejected" : status}{" "}
@@ -256,7 +319,10 @@ export default function DashboardPage() {
               <div className="relative">
                 <select
                   value={sort}
-                  onChange={(e) => setSort(e.target.value)}
+                  onChange={(e) => {
+                    setPage(1);
+                    setSort(e.target.value as SubmissionSort);
+                  }}
                   className="appearance-none rounded-[12px] border border-[#E8E3DA] bg-[#FAF7F2] py-2 pl-3 pr-8 text-xs font-semibold outline-none focus:border-[#C25927]"
                 >
                   <option value="newest">Newest first</option>
@@ -271,6 +337,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => {
                   setFilter("All");
+                  setPage(1);
                   setSearch("");
                   setSort("newest");
                 }}
@@ -482,15 +549,39 @@ export default function DashboardPage() {
             <span>
               Showing{" "}
               <strong className="text-[#342E27]">
-                {visibleSubmissions.length}
+                {pagination?.total
+                  ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, pagination.total)} of ${pagination.total}`
+                  : "0"}
               </strong>{" "}
-              {visibleSubmissions.length === 1 ? "submission" : "submissions"}
+              {pagination?.total === 1 ? "submission" : "submissions"}
             </span>
-            <span>
-              {isReviewer
-                ? `${role === "admin" ? "Admin" : "Mentor"} access · All student submissions`
-                : "Student access · Only your submissions"}
-            </span>
+            <div className="flex items-center gap-3">
+              <span>
+                {isReviewer
+                  ? `${role === "admin" ? "Admin" : "Mentor"} access · All student submissions`
+                  : "Student access · Only your submissions"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page <= 1 || status === "loading"}
+                className="rounded border border-[#E8E3DA] px-3 py-1.5 font-semibold text-[#6B6256] disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span>
+                Page {pagination?.page ?? page} of{" "}
+                {Math.max(1, pagination?.totalPages ?? 1)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={!pagination?.hasNextPage || status === "loading"}
+                className="rounded border border-[#E8E3DA] px-3 py-1.5 font-semibold text-[#6B6256] disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </section>
       </main>
@@ -646,7 +737,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-[#8F8578]">
-                    A written note is recommended when requesting a Rejected.
+                    Written feedback is required to submit a review.
                   </p>
                 </div>
               )}
@@ -660,11 +751,13 @@ export default function DashboardPage() {
               </button>
               {isReviewer ? (
                 <button
-                  disabled={!decision}
+                  disabled={
+                    !decision || !feedback.trim() || reviewStatus === "loading"
+                  }
                   onClick={saveReview}
                   className="rounded-[12px] bg-[#C25927] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#AD491D] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Save review
+                  {reviewStatus === "loading" ? "Saving…" : "Save review"}
                 </button>
               ) : (
                 <span className="text-xs text-[#8F8578]">
@@ -675,65 +768,6 @@ export default function DashboardPage() {
           </aside>
         </div>
       )}
-    </div>
-  );
-}
-
-function ResourceLink({
-  href,
-  title,
-  subtitle,
-  icon,
-}: {
-  href?: string;
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-}) {
-  const content = (
-    <>
-      <span className="rounded-[12px] bg-[#FDF6F2] p-2.5 text-[#C25927]">
-        {icon}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-xs font-bold text-[#342E27]">{title}</span>
-        <span className="mt-1 block truncate text-[11px] text-[#8F8578]">
-          {subtitle}
-        </span>
-      </span>
-      <ExternalLink className="ml-auto shrink-0 text-[#8F8578]" size={14} />
-    </>
-  );
-  return href ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="flex min-w-0 items-center gap-3 rounded-[12px] border border-[#E8E3DA] p-3 transition hover:border-[#C25927]/40 hover:bg-[#FAF7F2]"
-    >
-      {content}
-    </a>
-  ) : (
-    <div className="flex min-w-0 items-center gap-3 rounded-[12px] border border-dashed border-[#E8E3DA] p-3 opacity-60">
-      {content}
-    </div>
-  );
-}
-
-function EmptyState({ role }: { role: UserRole }) {
-  return (
-    <div className="px-6 py-14 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[12px] bg-[#F5EFE6] text-[#8F8578]">
-        <FolderKanban size={22} />
-      </div>
-      <h3 className="mt-4 font-display text-base font-extrabold">
-        No submissions found
-      </h3>
-      <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-[#8F8578]">
-        {role === "student"
-          ? "You don’t have any submissions matching these filters yet."
-          : "No projects match the current search and filters."}
-      </p>
     </div>
   );
 }

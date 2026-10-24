@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { projectSchema, type ProjectValues } from "@/lib/validation/project";
+import { submitProject } from "@/lib/submissions-slice";
+import { useAppDispatch, useAppSelector } from "@/lib/store";
+import { toast } from "sonner";
 
 interface ProjectSubmissionProps {
   aside?: ReactNode;
@@ -23,6 +26,10 @@ interface ProjectSubmissionProps {
 
 export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const submissionStatus = useAppSelector(
+    (state) => state.submissions.status,
+  );
   const form = useForm<ProjectValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -33,10 +40,19 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
     },
   });
 
-  const onSubmit: SubmitHandler<ProjectValues> = async () => {
-    setSubmissionNotice(
-      "Your project passed validation, but the submission service is not connected yet. Nothing has been sent.",
-    );
+  const onSubmit: SubmitHandler<ProjectValues> = async (values) => {
+    try {
+      await dispatch(submitProject(values)).unwrap();
+      setSubmissionNotice("Your project was submitted for review.");
+      toast.success("Project submitted successfully.");
+      form.reset();
+    } catch (error) {
+      toast.error(
+        typeof error === "string"
+          ? error
+          : "Unable to submit your project. Please try again.",
+      );
+    }
   };
 
   return (
@@ -152,7 +168,9 @@ export function ProjectSubmission({ aside }: ProjectSubmissionProps) {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={form.formState.isSubmitting}
+                  disabled={
+                    form.formState.isSubmitting || submissionStatus === "loading"
+                  }
                 >
                   Submit project
                   <ArrowRight aria-hidden="true" />

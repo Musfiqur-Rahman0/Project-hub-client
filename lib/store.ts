@@ -2,11 +2,13 @@ import { configureStore } from "@reduxjs/toolkit";
 import { useDispatch, useSelector, type TypedUseSelectorHook } from "react-redux";
 
 import authReducer from "@/lib/auth-slice";
+import submissionsReducer from "@/lib/submissions-slice";
 
 export function makeStore() {
   return configureStore({
     reducer: {
       auth: authReducer,
+      submissions: submissionsReducer,
     },
   });
 }

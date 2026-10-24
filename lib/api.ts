@@ -13,10 +13,63 @@ export type AuthUser = {
   role: "STUDENT" | "MENTOR" | "ADMIN";
 };
 
+export type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export type SubmissionRequest = {
+  projectName: string;
+  repoUrl: string;
+  liveUrl: string;
+  description: string;
+};
+
+export type ProjectSubmission = {
+  id: string;
+  projectName: string;
+  repositoryUrl: string;
+  liveUrl: string;
+  description: string;
+  status: SubmissionStatus;
+  studentId: string;
+  reviewerId: string | null;
+  feedback: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  student?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+};
+
+export type SubmissionStats = {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+};
+
 type ApiResponse<T> = {
   success: true;
   data: T;
+  meta?: Record<string, unknown>;
 };
+
+export type SubmissionPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+export type SubmissionListResponse = {
+  submissions: ProjectSubmission[];
+  pagination: SubmissionPagination;
+};
+
+export type SubmissionSort = "newest" | "oldest" | "name";
 
 type ApiErrorResponse = {
   success: false;
@@ -70,6 +123,101 @@ async function postAuth<T>(path: string, input: RegisterRequest | LoginRequest) 
   }
 
   return (body as ApiResponse<T>).data;
+}
+
+async function requestApi<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<ApiResponse<T>> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_API_URL is not configured.");
+  }
+
+  const response = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...init.headers,
+    },
+  });
+
+  let body: ApiResponse<T> | ApiErrorResponse;
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error("The server returned an unreadable response.");
+  }
+
+  if (!response.ok || !body.success) {
+    const errorBody = body as ApiErrorResponse;
+    throw new ApiError(
+      errorBody.error?.message ?? `Request failed (${response.status}).`,
+      response.status,
+      errorBody.error?.details,
+    );
+  }
+
+  return body as ApiResponse<T>;
+}
+
+export async function getSubmissions(input: {
+  page: number;
+  pageSize: number;
+  status?: SubmissionStatus;
+  search?: string;
+  sort?: SubmissionSort;
+}): Promise<SubmissionListResponse> {
+  const params = new URLSearchParams({
+    page: String(input.page),
+    pageSize: String(input.pageSize),
+    sort: input.sort ?? "newest",
+  });
+  if (input.status) params.set("status", input.status);
+  if (input.search) params.set("search", input.search);
+  const response = await requestApi<ProjectSubmission[]>(
+    `/submission/?${params.toString()}`,
+  );
+  const meta = response.meta as SubmissionPagination | undefined;
+
+  if (!meta) {
+    throw new Error("The server returned an invalid submission list.");
+  }
+
+  return { submissions: response.data, pagination: meta };
+}
+
+export async function getSubmissionStats(): Promise<SubmissionStats> {
+  const response = await requestApi<SubmissionStats>("/submission/stats");
+  return response.data;
+}
+
+export async function createSubmission(
+  input: SubmissionRequest,
+): Promise<ProjectSubmission> {
+  const response = await requestApi<ProjectSubmission>("/submission/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return response.data;
+}
+
+export async function reviewSubmission(input: {
+  id: string;
+  status: Exclude<SubmissionStatus, "PENDING">;
+  feedback: string;
+}): Promise<ProjectSubmission> {
+  const { id, ...body } = input;
+  const response = await requestApi<ProjectSubmission>(
+    `/submission/${encodeURIComponent(id)}/review`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    },
+  );
+  return response.data;
 }
 
 export async function registerUser(input: RegisterRequest): Promise<AuthUser> {

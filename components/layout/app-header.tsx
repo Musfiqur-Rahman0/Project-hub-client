@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { logoutUser } from "@/lib/api";
 import { clearUser } from "@/lib/auth-slice";
+import { clearSubmissions } from "@/lib/submissions-slice";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 
 export function AppHeader() {
@@ -22,6 +23,7 @@ export function AppHeader() {
     try {
       await logoutUser();
       dispatch(clearUser());
+      dispatch(clearSubmissions());
       toast.success("You have been signed out.");
       router.replace("/login");
       router.refresh();

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { ApiError, getCurrentUser } from "@/lib/api";
 import { clearUser, setLoading, setUser } from "@/lib/auth-slice";
+import { clearSubmissions } from "@/lib/submissions-slice";
 import { makeStore, useAppDispatch } from "@/lib/store";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -34,6 +35,7 @@ function SessionInitializer() {
         if (cancelled) return;
 
         dispatch(clearUser());
+        dispatch(clearSubmissions());
         if (!(error instanceof ApiError && error.status === 401)) {
           toast.error(
             error instanceof Error
