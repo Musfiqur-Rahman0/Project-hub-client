@@ -28,7 +28,9 @@ export function AppHeader() {
       router.replace("/login");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to sign out.");
+      toast.error(
+        error instanceof Error ? error.message : "Unable to sign out.",
+      );
     } finally {
       setIsSigningOut(false);
     }
@@ -39,20 +41,19 @@ export function AppHeader() {
       <div className="mx-auto flex min-h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-0">
         <div className="flex min-w-0 items-center gap-3">
           <Link
-            href="/dashboard/submission"
+            href="/"
             aria-label="ProjectHub home"
             className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm"
           >
             <BriefcaseBusiness aria-hidden="true" size={16} />
           </Link>
-          <Link
-            href="/dashboard/submission"
-            className="shrink-0 text-sm font-bold tracking-tight"
-          >
+          <Link href="/" className="shrink-0 text-sm font-bold tracking-tight">
             ProjectHub
           </Link>
           <span className="hidden rounded-full bg-brand-secondary/10 px-2.5 py-1 text-[10px] font-medium text-brand-secondary sm:inline-flex">
-            Student Workspace
+            {user?.role === "STUDENT"
+              ? "Student Workspace "
+              : "Mentor Workspace"}
           </span>
         </div>
 
@@ -64,7 +65,9 @@ export function AppHeader() {
             />
             <span className="hidden sm:inline">
               {user?.fullName ??
-                (authStatus === "loading" ? "Loading account…" : "Account unavailable")}
+                (authStatus === "loading"
+                  ? "Loading account…"
+                  : "Account unavailable")}
             </span>
           </span>
           <span className="hidden text-muted-foreground md:inline">
