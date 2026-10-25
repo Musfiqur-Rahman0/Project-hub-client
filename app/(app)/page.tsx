@@ -234,7 +234,7 @@ export default function DashboardPage() {
                 : "Private student view"}
             </div>
             {role === "student" && (
-              <Link href="/submission" className="button">
+              <Link href="/submission" className="button text-white!">
                 Add Project
               </Link>
             )}
